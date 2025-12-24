@@ -1,0 +1,1342 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Havaiana Ninja</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@400;600&display=swap");
+
+      :root {
+        --bg-deep: #0b1020;
+        --bg-mid: #16193a;
+        --bg-warm: #2a1b4a;
+        --accent: #ffb347;
+        --accent-2: #72e0ff;
+        --accent-3: #7ef29b;
+        --danger: #ff5d5d;
+        --panel: rgba(12, 14, 30, 0.78);
+        --panel-border: rgba(255, 255, 255, 0.12);
+        --text: #f6f3ff;
+        --muted: rgba(246, 243, 255, 0.7);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 20% 15%, rgba(255, 177, 71, 0.25), transparent 45%),
+          radial-gradient(circle at 85% 10%, rgba(114, 224, 255, 0.25), transparent 50%),
+          radial-gradient(circle at 20% 85%, rgba(126, 242, 155, 0.2), transparent 45%),
+          linear-gradient(160deg, var(--bg-warm) 0%, var(--bg-mid) 50%, var(--bg-deep) 100%);
+        color: var(--text);
+        font-family: "Chakra Petch", "Segoe UI", sans-serif;
+        overflow: hidden;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(120deg, rgba(255, 255, 255, 0.04) 0%, transparent 50%),
+          repeating-linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.025) 0 2px,
+            transparent 2px 12px
+          );
+        mix-blend-mode: screen;
+        pointer-events: none;
+      }
+
+      #app {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      #game {
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+      }
+
+      #hud {
+        position: absolute;
+        top: 18px;
+        left: 18px;
+        right: 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        pointer-events: none;
+        z-index: 2;
+      }
+
+      .hud-group {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .score-pill {
+        background: rgba(12, 14, 30, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        padding: 10px 14px;
+        min-width: 110px;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+      }
+
+      .score-pill .label {
+        display: block;
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--muted);
+      }
+
+      .score-pill .value {
+        font-family: "Bungee", "Chakra Petch", sans-serif;
+        font-size: 1.35rem;
+        color: #fff;
+      }
+
+      .powerups {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 180px;
+      }
+
+      .powerup {
+        background: rgba(12, 14, 30, 0.7);
+        border-radius: 12px;
+        padding: 8px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .powerup .tag {
+        font-family: "Bungee", sans-serif;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+
+      .powerup .bar {
+        flex: 1;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        overflow: hidden;
+      }
+
+      .powerup .bar span {
+        display: block;
+        height: 100%;
+        width: 0%;
+        border-radius: 999px;
+      }
+
+      .overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(6, 8, 20, 0.55);
+        backdrop-filter: blur(8px);
+        z-index: 4;
+        transition: opacity 0.35s ease;
+      }
+
+      .overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .panel {
+        width: min(540px, 90vw);
+        padding: 28px 26px 24px;
+        background: var(--panel);
+        border-radius: 26px;
+        border: 1px solid var(--panel-border);
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
+        text-align: center;
+      }
+
+      .logo {
+        width: min(280px, 70vw);
+        margin-bottom: 16px;
+        filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.45));
+      }
+
+      .menu-message {
+        font-size: 1rem;
+        color: var(--muted);
+        margin-bottom: 16px;
+      }
+
+      .menu-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .stat {
+        background: rgba(255, 255, 255, 0.06);
+        padding: 10px 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .stat .label {
+        display: block;
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--muted);
+      }
+
+      .stat .value {
+        font-family: "Bungee", sans-serif;
+        font-size: 1.4rem;
+      }
+
+      .btn-primary {
+        border: none;
+        background: linear-gradient(135deg, #ffb347, #ff7a59);
+        color: #221613;
+        font-family: "Bungee", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 1rem;
+        padding: 12px 28px;
+        border-radius: 999px;
+        cursor: pointer;
+        box-shadow: 0 16px 32px rgba(255, 122, 89, 0.35);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 18px 36px rgba(255, 122, 89, 0.45);
+      }
+
+      .btn-primary:disabled {
+        cursor: not-allowed;
+        filter: grayscale(0.4);
+        opacity: 0.7;
+      }
+
+      .credits {
+        margin-top: 16px;
+        font-size: 0.85rem;
+        color: rgba(246, 243, 255, 0.65);
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+      }
+
+      @media (max-width: 600px) {
+        #hud {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .powerups {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game"></canvas>
+      <div id="hud">
+        <div class="hud-group">
+          <div class="score-pill">
+            <span class="label">Pontuacao</span>
+            <span id="scoreValue" class="value">0</span>
+          </div>
+          <div class="score-pill">
+            <span class="label">Recorde</span>
+            <span id="bestValue" class="value">0</span>
+          </div>
+        </div>
+        <div id="powerupList" class="powerups"></div>
+      </div>
+
+      <div id="menu" class="overlay">
+        <div class="panel">
+          <img class="logo" src="LOGO/LOGO.png" alt="Logo Havaiana Ninja" />
+          <div id="menuMessage" class="menu-message">Carregando...</div>
+          <div class="menu-stats">
+            <div class="stat">
+              <span class="label">Recorde</span>
+              <span id="menuBest" class="value">0</span>
+            </div>
+            <div class="stat">
+              <span class="label">Ultima</span>
+              <span id="menuLast" class="value">0</span>
+            </div>
+          </div>
+          <button id="startBtn" class="btn-primary" disabled>Comecar</button>
+          <div class="credits">feito por FELALVES</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById("game");
+      const ctx = canvas.getContext("2d");
+      const scoreValue = document.getElementById("scoreValue");
+      const bestValue = document.getElementById("bestValue");
+      const menu = document.getElementById("menu");
+      const menuMessage = document.getElementById("menuMessage");
+      const menuBest = document.getElementById("menuBest");
+      const menuLast = document.getElementById("menuLast");
+      const startBtn = document.getElementById("startBtn");
+      const powerupList = document.getElementById("powerupList");
+
+      const STORAGE_KEY = "havaianaNinjaRecorde";
+      const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+      const rand = (min, max) => Math.random() * (max - min) + min;
+      const randInt = (min, max) => Math.floor(rand(min, max + 1));
+      const lerp = (a, b, t) => a + (b - a) * t;
+
+      const COLORS = {
+        normal: "#f7a851",
+        bomb: "#ff5d5d",
+        freeze: "#65d0ff",
+        frenzy: "#ff9a3c",
+        double: "#6ef09b"
+      };
+
+      const POWER_CONFIG = {
+        freeze: { label: "Gelo", duration: 4.5, color: COLORS.freeze },
+        frenzy: { label: "Frenesi", duration: 4.8, color: COLORS.frenzy },
+        double: { label: "2x Pontos", duration: 6.0, color: COLORS.double }
+      };
+      const GRAVITY = 1150;
+
+      const state = {
+        running: false,
+        score: 0,
+        best: Number(localStorage.getItem(STORAGE_KEY) || 0),
+        lastScore: 0,
+        comboStreak: 0,
+        lastComboTime: 0,
+        effects: { freeze: 0, frenzy: 0, double: 0 },
+        timeScale: 1
+      };
+
+      let width = 0;
+      let height = 0;
+      let dpr = 1;
+
+      const assets = {
+        normal: [],
+        bomb: [],
+        special: []
+      };
+
+      const items = [];
+      const particles = [];
+      const floatingTexts = [];
+      const pointer = {
+        active: false,
+        points: [],
+        swipe: null,
+        lastX: 0,
+        lastY: 0
+      };
+      const powerupElements = {};
+      let failedAssets = [];
+      let hadSecurityError = false;
+
+      Object.entries(POWER_CONFIG).forEach(([key, config]) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "powerup";
+        wrapper.style.display = "none";
+        wrapper.innerHTML = `
+          <div class="tag" style="color:${config.color}">${config.label}</div>
+          <div class="bar"><span style="background:${config.color};width:0%"></span></div>
+        `;
+        powerupList.appendChild(wrapper);
+        powerupElements[key] = {
+          wrapper,
+          bar: wrapper.querySelector("span")
+        };
+      });
+
+      let lastTime = performance.now();
+      let spawnTimer = 0;
+      let nextSpawn = 0.8;
+      let frenzySpawn = 0;
+      let audioCtx = null;
+
+      function resize() {
+        dpr = window.devicePixelRatio || 1;
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      window.addEventListener("resize", resize);
+      resize();
+
+      function ensureAudio() {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+      }
+
+      function playSound({ type }) {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === "bomb") {
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(120, now);
+          osc.frequency.exponentialRampToValueAtTime(40, now + 0.25);
+          gain.gain.setValueAtTime(0.35, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        } else {
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(520 + Math.random() * 160, now);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.18);
+        }
+      }
+
+      function updateHud() {
+        scoreValue.textContent = state.score;
+        bestValue.textContent = state.best;
+        menuBest.textContent = state.best;
+        menuLast.textContent = state.lastScore;
+      }
+
+      function showMenu(message) {
+        menuMessage.textContent = message;
+        menu.classList.remove("hidden");
+      }
+
+      function hideMenu() {
+        menu.classList.add("hidden");
+      }
+
+      function worldToLocal(item, point) {
+        const dx = point.x - item.x;
+        const dy = point.y - item.y;
+        const cos = Math.cos(-item.rotation);
+        const sin = Math.sin(-item.rotation);
+        return {
+          x: (dx * cos - dy * sin) / item.scale + item.source.width / 2,
+          y: (dx * sin + dy * cos) / item.scale + item.source.height / 2
+        };
+      }
+
+      function alphaAt(source, x, y) {
+        if (!source.imageData) return 255;
+        if (x < 0 || y < 0 || x >= source.width || y >= source.height) return 0;
+        const ix = Math.floor(x);
+        const iy = Math.floor(y);
+        const idx = (iy * source.width + ix) * 4 + 3;
+        return source.imageData.data[idx];
+      }
+
+      function distanceToSegment(p1, p2, point) {
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) return Math.hypot(point.x - p1.x, point.y - p1.y);
+        const t = clamp(((point.x - p1.x) * dx + (point.y - p1.y) * dy) / lenSq, 0, 1);
+        const px = p1.x + t * dx;
+        const py = p1.y + t * dy;
+        return Math.hypot(point.x - px, point.y - py);
+      }
+
+      function segmentHitsItem(item, p1, p2) {
+        const dist = distanceToSegment(p1, p2, { x: item.x, y: item.y });
+        if (dist > item.radius + 10) return false;
+        const steps = Math.max(3, Math.floor(Math.hypot(p2.x - p1.x, p2.y - p1.y) / 12));
+        for (let i = 0; i <= steps; i += 1) {
+          const t = i / steps;
+          const sample = { x: lerp(p1.x, p2.x, t), y: lerp(p1.y, p2.y, t) };
+          const local = worldToLocal(item, sample);
+          if (alphaAt(item.source, local.x, local.y) > 40) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      function polygonArea(poly) {
+        let sum = 0;
+        for (let i = 0; i < poly.length; i += 1) {
+          const a = poly[i];
+          const b = poly[(i + 1) % poly.length];
+          sum += a.x * b.y - b.x * a.y;
+        }
+        return Math.abs(sum) / 2;
+      }
+
+      function intersectLine(p1, p2, a, b, c) {
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const denom = a * dx + b * dy;
+        if (Math.abs(denom) < 0.00001) return { x: p1.x, y: p1.y };
+        const t = -(a * p1.x + b * p1.y + c) / denom;
+        return { x: p1.x + dx * t, y: p1.y + dy * t };
+      }
+
+      function clipPolygon(poly, a, b, c, keepPositive) {
+        const output = [];
+        const inside = (p) => {
+          const value = a * p.x + b * p.y + c;
+          return keepPositive ? value >= 0 : value <= 0;
+        };
+        for (let i = 0; i < poly.length; i += 1) {
+          const current = poly[i];
+          const prev = poly[(i + poly.length - 1) % poly.length];
+          const currInside = inside(current);
+          const prevInside = inside(prev);
+          if (currInside) {
+            if (!prevInside) {
+              output.push(intersectLine(prev, current, a, b, c));
+            }
+            output.push(current);
+          } else if (prevInside) {
+            output.push(intersectLine(prev, current, a, b, c));
+          }
+        }
+        return output;
+      }
+
+      function renderPiece(source, poly) {
+        if (poly.length < 3) return null;
+        const area = polygonArea(poly);
+        if (area < 12) return null;
+        const canvasPiece = document.createElement("canvas");
+        canvasPiece.width = source.width;
+        canvasPiece.height = source.height;
+        const pctx = canvasPiece.getContext("2d");
+        pctx.save();
+        pctx.beginPath();
+        poly.forEach((point, index) => {
+          if (index === 0) {
+            pctx.moveTo(point.x, point.y);
+          } else {
+            pctx.lineTo(point.x, point.y);
+          }
+        });
+        pctx.closePath();
+        pctx.clip();
+        pctx.drawImage(source.element, 0, 0);
+        pctx.restore();
+        return canvasPiece;
+      }
+
+      function splitSource(source, localA, localB) {
+        const dx = localB.x - localA.x;
+        const dy = localB.y - localA.y;
+        if (Math.hypot(dx, dy) < 10) return [null, null];
+        const a = dy;
+        const b = -dx;
+        const c = -(a * localA.x + b * localA.y);
+        const rect = [
+          { x: 0, y: 0 },
+          { x: source.width, y: 0 },
+          { x: source.width, y: source.height },
+          { x: 0, y: source.height }
+        ];
+        const polyA = clipPolygon(rect, a, b, c, true);
+        const polyB = clipPolygon(rect, a, b, c, false);
+        return [renderPiece(source, polyA), renderPiece(source, polyB)];
+      }
+
+      function createSourceFromImage(img, src) {
+        const canvasSource = document.createElement("canvas");
+        canvasSource.width = img.naturalWidth;
+        canvasSource.height = img.naturalHeight;
+        const sctx = canvasSource.getContext("2d");
+        sctx.drawImage(img, 0, 0);
+        let imageData = null;
+        try {
+          imageData = sctx.getImageData(0, 0, canvasSource.width, canvasSource.height);
+        } catch (err) {
+          markAssetFailure(src, err);
+        }
+        return {
+          element: canvasSource,
+          imageData,
+          width: canvasSource.width,
+          height: canvasSource.height
+        };
+      }
+
+      function createSourceFromCanvas(canvasSource) {
+        const sctx = canvasSource.getContext("2d");
+        let imageData = null;
+        try {
+          imageData = sctx.getImageData(0, 0, canvasSource.width, canvasSource.height);
+        } catch (err) {
+          imageData = null;
+        }
+        return {
+          element: canvasSource,
+          imageData,
+          width: canvasSource.width,
+          height: canvasSource.height
+        };
+      }
+
+      function spawnParticleBurst(x, y, color) {
+        const count = randInt(10, 18);
+        for (let i = 0; i < count; i += 1) {
+          particles.push({
+            x,
+            y,
+            vx: rand(-240, 240),
+            vy: rand(-320, 120),
+            size: rand(4, 8),
+            life: rand(0.5, 0.9),
+            age: 0,
+            color
+          });
+        }
+      }
+
+      function spawnFloatingText(text, x, y, color) {
+        floatingTexts.push({
+          x,
+          y,
+          text,
+          color,
+          life: 1.2,
+          age: 0
+        });
+      }
+
+      class SliceItem {
+        constructor({ source, kind, specialType, scoreValue, scale, x, y, vx, vy, rotation, vr, lifetime }) {
+          this.source = source;
+          this.kind = kind;
+          this.specialType = specialType || null;
+          this.scoreValue = scoreValue || 0;
+          this.scale = scale;
+          this.x = x;
+          this.y = y;
+          this.vx = vx;
+          this.vy = vy;
+          this.rotation = rotation;
+          this.vr = vr;
+          this.lifetime = lifetime || null;
+          this.age = 0;
+          this.radius = Math.max(source.width, source.height) * scale * 0.45;
+        }
+
+        update(dt) {
+          this.vy += GRAVITY * dt;
+          this.x += this.vx * dt;
+          this.y += this.vy * dt;
+          this.rotation += this.vr * dt;
+          this.age += dt;
+        }
+
+        draw(ctxRef) {
+          if (this.kind === "special") {
+            const radius = Math.max(this.source.width, this.source.height) * this.scale * 0.6;
+            const color = COLORS[this.specialType];
+            const gradient = ctxRef.createRadialGradient(
+              this.x,
+              this.y,
+              radius * 0.2,
+              this.x,
+              this.y,
+              radius
+            );
+            gradient.addColorStop(0, `${color}55`);
+            gradient.addColorStop(1, "transparent");
+            ctxRef.fillStyle = gradient;
+            ctxRef.beginPath();
+            ctxRef.arc(this.x, this.y, radius, 0, Math.PI * 2);
+            ctxRef.fill();
+          }
+
+          if (this.kind === "bomb") {
+            const radius = Math.max(this.source.width, this.source.height) * this.scale * 0.55;
+            const gradient = ctxRef.createRadialGradient(
+              this.x,
+              this.y,
+              radius * 0.2,
+              this.x,
+              this.y,
+              radius
+            );
+            gradient.addColorStop(0, "rgba(255, 80, 80, 0.35)");
+            gradient.addColorStop(1, "transparent");
+            ctxRef.fillStyle = gradient;
+            ctxRef.beginPath();
+            ctxRef.arc(this.x, this.y, radius, 0, Math.PI * 2);
+            ctxRef.fill();
+          }
+
+          ctxRef.save();
+          ctxRef.translate(this.x, this.y);
+          ctxRef.rotate(this.rotation);
+          ctxRef.scale(this.scale, this.scale);
+          ctxRef.drawImage(this.source.element, -this.source.width / 2, -this.source.height / 2);
+          ctxRef.restore();
+        }
+      }
+
+      function createItem({ source, kind, specialType, scoreValue, spawnMode = "normal" }) {
+        const base = Math.min(width, height);
+        const targetSize = rand(base * 0.12, base * 0.2);
+        const scale = targetSize / Math.max(source.width, source.height);
+        const safePad = Math.max(48, base * 0.08);
+        const isSide = spawnMode === "side";
+        const isFrenzy = spawnMode === "frenzy";
+        const sidePick = isSide ? (Math.random() < 0.7 ? "left" : "right") : null;
+        const spawnX = isSide
+          ? sidePick === "left"
+            ? -safePad
+            : width + safePad
+          : rand(safePad, width - safePad);
+        const spawnY = height + rand(10, 60);
+
+        const difficulty = 1 + Math.min(0.7, state.score / 550);
+        const lift = Math.min(0.16, (state.score / 1200) * 0.16);
+        const baseApexMin = isFrenzy ? 0.22 : 0.26;
+        const baseApexMax = isFrenzy ? 0.46 : 0.54;
+        const apexMin = Math.max(height * 0.12, height * (baseApexMin - lift));
+        const apexMax = Math.min(height * 0.6, Math.max(apexMin + height * 0.12, height * (baseApexMax - lift)));
+        const targetApexY = rand(apexMin, apexMax);
+
+        const speedBoost = 1 + Math.min(0.6, state.score / 700) * 0.35;
+        const vyBase = -Math.sqrt(2 * GRAVITY * Math.max(0, spawnY - targetApexY));
+        const maxVy = -Math.sqrt(2 * GRAVITY * Math.max(0, spawnY - height * 0.08));
+        const vy = -Math.min(Math.abs(vyBase * speedBoost), Math.abs(maxVy));
+
+        const tApex = Math.abs(vy) / GRAVITY;
+        const tTotal = tApex * 2;
+        const centerRange = isFrenzy ? 0.08 : 0.12;
+        const centerTarget = width * 0.5 + rand(-width * centerRange, width * centerRange);
+        const directionBias = isFrenzy
+          ? 0
+          : spawnX < width * 0.5
+            ? rand(width * 0.05, width * 0.14)
+            : rand(-width * 0.08, width * 0.06);
+        const targetX = clamp(centerTarget + directionBias, safePad, width - safePad);
+        const aimTime = tTotal * 0.55;
+        let vx = (targetX - spawnX) / Math.max(0.4, aimTime);
+        if (isSide) {
+          const sideTarget = width * 0.5 + rand(-width * 0.18, width * 0.18);
+          vx = (sideTarget - spawnX) / Math.max(0.6, tTotal * 0.55);
+        }
+        const vxLimit = base * (0.65 + (difficulty - 1) * 0.2);
+        vx = clamp(vx, -vxLimit, vxLimit);
+        const rotation = rand(0, Math.PI * 2);
+        const vr = rand(-3, 3);
+        return new SliceItem({
+          source,
+          kind,
+          specialType,
+          scoreValue,
+          scale,
+          x: spawnX,
+          y: spawnY,
+          vx,
+          vy,
+          rotation,
+          vr
+        });
+      }
+
+      function createFragment(baseItem, canvasSource, offset, extraVelocity) {
+        const source = createSourceFromCanvas(canvasSource);
+        const fragment = new SliceItem({
+          source,
+          kind: "fragment",
+          scoreValue: 0,
+          scale: baseItem.scale,
+          x: baseItem.x + offset.x,
+          y: baseItem.y + offset.y,
+          vx: baseItem.vx + extraVelocity.x,
+          vy: baseItem.vy + extraVelocity.y,
+          rotation: baseItem.rotation + rand(-0.4, 0.4),
+          vr: baseItem.vr + rand(-2, 2),
+          lifetime: 2.6
+        });
+        fragment.radius = Math.max(source.width, source.height) * fragment.scale * 0.35;
+        return fragment;
+      }
+
+      function activatePower(type, x, y) {
+        const config = POWER_CONFIG[type];
+        if (!config) return;
+        state.effects[type] = config.duration;
+        spawnFloatingText(`${config.label}!`, x, y, config.color);
+      }
+
+      function addScore(points, x, y) {
+        const multiplier = state.effects.double > 0 ? 2 : 1;
+        const total = Math.round(points * multiplier);
+        state.score += total;
+        scoreValue.textContent = state.score;
+        spawnFloatingText(`+${total}`, x, y, "#ffffff");
+      }
+
+      function handleCombo() {
+        if (!pointer.swipe) return;
+        const now = performance.now();
+        const count = pointer.swipe.cuts;
+        if (count >= 3) {
+          const baseBonus = count * 2;
+          const timeSince = now - state.lastComboTime;
+          if (timeSince < 2000) {
+            state.comboStreak += 1;
+          } else {
+            state.comboStreak = 1;
+          }
+          state.lastComboTime = now;
+          const streakBoost = 1 + (state.comboStreak - 1) * 0.4;
+          const bonus = Math.round(baseBonus * streakBoost);
+          addScore(bonus, pointer.lastX, pointer.lastY);
+          spawnFloatingText(`Combo x${count}`, pointer.lastX, pointer.lastY - 30, "#ffd166");
+        }
+        pointer.swipe = null;
+      }
+
+      function cutItem(item, p1, p2) {
+        if (item.kind === "bomb") {
+          spawnParticleBurst(item.x, item.y, COLORS.bomb);
+          playSound({ type: "bomb" });
+          endGame("Voce perdeu! Cortou uma bomba.");
+          return;
+        }
+
+        playSound({ type: "slice" });
+        if (item.kind !== "fragment") {
+          addScore(item.scoreValue, item.x, item.y);
+          if (pointer.swipe) pointer.swipe.cuts += 1;
+        }
+
+        if (item.kind === "special") {
+          activatePower(item.specialType, item.x, item.y);
+        }
+
+        const localA = worldToLocal(item, p1);
+        const localB = worldToLocal(item, p2);
+        const pieces = splitSource(item.source, localA, localB);
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const normal = { x: -dy / len, y: dx / len };
+        const spread = 140;
+
+        if (pieces[0]) {
+          items.push(
+            createFragment(
+              item,
+              pieces[0],
+              { x: normal.x * 10, y: normal.y * 10 },
+              { x: normal.x * spread, y: normal.y * spread }
+            )
+          );
+        }
+        if (pieces[1]) {
+          items.push(
+            createFragment(
+              item,
+              pieces[1],
+              { x: -normal.x * 10, y: -normal.y * 10 },
+              { x: -normal.x * spread, y: -normal.y * spread }
+            )
+          );
+        }
+
+        const color = item.kind === "special" ? COLORS[item.specialType] : COLORS.normal;
+        spawnParticleBurst(item.x, item.y, color);
+        item.cut = true;
+      }
+
+      function spawnWave() {
+        const count = randInt(1, 3 + Math.min(2, Math.floor(state.score / 30)));
+        for (let i = 0; i < count; i += 1) {
+          spawnRandomItem("normal");
+        }
+      }
+
+      function spawnRandomItem(spawnMode = "normal") {
+        const bombChance = 0.1 + Math.min(0.06, state.score / 800);
+        const specialChance = 0.14;
+        const roll = Math.random();
+        if (spawnMode !== "frenzy" && assets.bomb.length > 0 && roll < bombChance) {
+          const source = assets.bomb[randInt(0, assets.bomb.length - 1)];
+          items.push(createItem({ source, kind: "bomb", scoreValue: 0, spawnMode }));
+          return;
+        }
+        if (assets.special.length > 0 && roll < bombChance + specialChance) {
+          const special = assets.special[randInt(0, assets.special.length - 1)];
+          items.push(
+            createItem({
+              source: special.source,
+              kind: "special",
+              specialType: special.type,
+              scoreValue: 2,
+              spawnMode
+            })
+          );
+          return;
+        }
+        if (assets.normal.length > 0) {
+          const source = assets.normal[randInt(0, assets.normal.length - 1)];
+          items.push(createItem({ source, kind: "normal", scoreValue: 1, spawnMode }));
+        }
+      }
+
+      function spawnFrenzyWave() {
+        const count = randInt(2, 4);
+        for (let i = 0; i < count; i += 1) {
+          spawnRandomItem("frenzy");
+        }
+      }
+
+      function updatePowerups(dt) {
+        Object.keys(state.effects).forEach((key) => {
+          if (state.effects[key] > 0) {
+            state.effects[key] = Math.max(0, state.effects[key] - dt);
+          }
+        });
+        state.timeScale = state.effects.freeze > 0 ? 0.45 : 1;
+        renderPowerupUi();
+      }
+
+      function renderPowerupUi() {
+        Object.entries(state.effects).forEach(([key, value]) => {
+          const entry = powerupElements[key];
+          if (!entry) return;
+          if (value <= 0) {
+            entry.wrapper.style.display = "none";
+            return;
+          }
+          entry.wrapper.style.display = "flex";
+          entry.bar.style.width = `${(value / POWER_CONFIG[key].duration) * 100}%`;
+        });
+      }
+
+      function updateItems(dt) {
+        const scaledDt = dt * state.timeScale;
+        for (let i = items.length - 1; i >= 0; i -= 1) {
+          const item = items[i];
+          item.update(scaledDt);
+          if (item.cut) {
+            items.splice(i, 1);
+            continue;
+          }
+          if (item.lifetime && item.age > item.lifetime) {
+            items.splice(i, 1);
+            continue;
+          }
+          if (item.y - item.radius > height + 120 || item.x < -200 || item.x > width + 200) {
+            items.splice(i, 1);
+          }
+        }
+      }
+
+      function updateParticles(dt) {
+        for (let i = particles.length - 1; i >= 0; i -= 1) {
+          const p = particles[i];
+          p.vy += 900 * dt;
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.age += dt;
+          if (p.age > p.life) {
+            particles.splice(i, 1);
+          }
+        }
+      }
+
+      function updateFloatingText(dt) {
+        for (let i = floatingTexts.length - 1; i >= 0; i -= 1) {
+          const t = floatingTexts[i];
+          t.age += dt;
+          t.y -= 30 * dt;
+          if (t.age > t.life) {
+            floatingTexts.splice(i, 1);
+          }
+        }
+      }
+
+      function updateSpawns(dt) {
+        spawnTimer += dt;
+        if (spawnTimer >= nextSpawn) {
+          spawnTimer = 0;
+          nextSpawn = rand(0.6, 1.1);
+          spawnWave();
+        }
+
+        if (state.effects.frenzy > 0) {
+          frenzySpawn += dt;
+          const interval = 0.18;
+          while (frenzySpawn > interval) {
+            frenzySpawn -= interval;
+            spawnFrenzyWave();
+          }
+        } else {
+          frenzySpawn = 0;
+        }
+      }
+
+      function update(dt) {
+        updatePowerups(dt);
+        updateSpawns(dt);
+        updateItems(dt);
+        updateParticles(dt);
+        updateFloatingText(dt);
+      }
+
+      function drawBackground() {
+        ctx.clearRect(0, 0, width, height);
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, "rgba(12, 12, 26, 0.55)");
+        gradient.addColorStop(1, "rgba(10, 12, 22, 0.2)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+      }
+
+      function drawItems() {
+        items.forEach((item) => item.draw(ctx));
+      }
+
+      function drawParticles() {
+        particles.forEach((p) => {
+          const alpha = 1 - p.age / p.life;
+          ctx.fillStyle = `${p.color}${Math.floor(alpha * 255).toString(16).padStart(2, "0")}`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      function drawFloatingText() {
+        floatingTexts.forEach((t) => {
+          const alpha = 1 - t.age / t.life;
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = t.color;
+          ctx.font = "18px Bungee, sans-serif";
+          ctx.fillText(t.text, t.x, t.y);
+          ctx.restore();
+        });
+      }
+
+      function drawTrail() {
+        if (pointer.points.length < 2) return;
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        pointer.points.forEach((p, index) => {
+          if (index === 0) {
+            ctx.moveTo(p.x, p.y);
+          } else {
+            ctx.lineTo(p.x, p.y);
+          }
+        });
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+        ctx.lineWidth = 12;
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+        ctx.lineWidth = 6;
+        ctx.stroke();
+        ctx.restore();
+      }
+      function render() {
+        drawBackground();
+        drawParticles();
+        drawItems();
+        drawFloatingText();
+        drawTrail();
+      }
+
+      function tick(now) {
+        const dt = Math.min(0.033, (now - lastTime) / 1000);
+        lastTime = now;
+        if (state.running) {
+          update(dt);
+        }
+        render();
+        requestAnimationFrame(tick);
+      }
+
+      function startGame() {
+        ensureAudio();
+        hideMenu();
+        state.running = true;
+        state.score = 0;
+        state.comboStreak = 0;
+        state.effects = { freeze: 0, frenzy: 0, double: 0 };
+        renderPowerupUi();
+        items.length = 0;
+        particles.length = 0;
+        floatingTexts.length = 0;
+        spawnTimer = 0;
+        nextSpawn = 0.6;
+        updateHud();
+      }
+
+      function endGame(message) {
+        state.running = false;
+        state.lastScore = state.score;
+        state.effects = { freeze: 0, frenzy: 0, double: 0 };
+        renderPowerupUi();
+        if (state.score > state.best) {
+          state.best = state.score;
+          localStorage.setItem(STORAGE_KEY, String(state.best));
+        }
+        updateHud();
+        showMenu(message);
+      }
+
+      function handlePointerDown(event) {
+        if (!state.running) return;
+        ensureAudio();
+        const rect = canvas.getBoundingClientRect();
+        pointer.active = true;
+        pointer.points = [];
+        pointer.swipe = { cuts: 0 };
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        pointer.points.push({ x, y });
+        pointer.lastX = x;
+        pointer.lastY = y;
+      }
+
+      function handlePointerMove(event) {
+        if (!state.running || !pointer.active) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const last = pointer.points[pointer.points.length - 1];
+        const current = { x, y };
+        pointer.points.push(current);
+        pointer.lastX = x;
+        pointer.lastY = y;
+        if (pointer.points.length > 10) pointer.points.shift();
+        if (last && Math.hypot(current.x - last.x, current.y - last.y) > 4) {
+          for (let i = items.length - 1; i >= 0; i -= 1) {
+            const item = items[i];
+            if (item.cut) continue;
+            if (segmentHitsItem(item, last, current)) {
+              cutItem(item, last, current);
+              if (!state.running) break;
+            }
+          }
+        }
+      }
+
+      function handlePointerUp() {
+        if (!pointer.active) return;
+        pointer.active = false;
+        pointer.points = [];
+        handleCombo();
+      }
+
+      canvas.addEventListener("pointerdown", (event) => {
+        canvas.setPointerCapture(event.pointerId);
+        handlePointerDown(event);
+      });
+      canvas.addEventListener("pointermove", handlePointerMove);
+      canvas.addEventListener("pointerup", (event) => {
+        canvas.releasePointerCapture(event.pointerId);
+        handlePointerUp();
+      });
+      canvas.addEventListener("pointercancel", handlePointerUp);
+      window.addEventListener("blur", handlePointerUp);
+
+      startBtn.addEventListener("click", () => {
+        if (!startBtn.disabled) startGame();
+      });
+
+      function loadImage(src) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = encodeURI(src);
+        });
+      }
+
+      function markAssetFailure(src, err) {
+        failedAssets.push(src);
+        if (err && err.name === "SecurityError") {
+          hadSecurityError = true;
+        }
+      }
+
+      function safeCreateSource(img, src) {
+        try {
+          return createSourceFromImage(img, src);
+        } catch (err) {
+          markAssetFailure(src, err);
+          return null;
+        }
+      }
+
+      async function loadImageWithFallback(paths) {
+        let lastError = null;
+        for (const src of paths) {
+          try {
+            const img = await loadImage(src);
+            return { img, src };
+          } catch (err) {
+            lastError = err;
+          }
+        }
+        markAssetFailure(paths[0], lastError);
+        return null;
+      }
+
+      function summarizeMissing(list) {
+        if (!list.length) return "";
+        const preview = list.slice(0, 3).join(", ");
+        const extra = list.length > 3 ? ` +${list.length - 3}` : "";
+        return `${preview}${extra}`;
+      }
+
+      async function loadAssets() {
+        failedAssets = [];
+        hadSecurityError = false;
+        assets.normal.length = 0;
+        assets.bomb.length = 0;
+        assets.special.length = 0;
+        const normalPaths = [
+          "Chinelos/Normais/NORMAL1.png",
+          "Chinelos/Normais/NORMAL2.png",
+          "Chinelos/Normais/NORMAL3.png",
+          "Chinelos/Normais/NORMAL4.png",
+          "Chinelos/Normais/NORMAL5.png",
+          "Chinelos/Normais/NORMAL6.png",
+          "Chinelos/Normais/NORMAL7.png"
+        ];
+        const bombPaths = [
+          "Chinelos/Bomba/BOMBA1.png",
+          "Chinelos/Bomba/BOMBA2.png",
+          "Chinelos/Bomba/BOMBA3.png"
+        ];
+        const specialPaths = [
+          { type: "freeze", src: "Chinelos/Especiais/CONGELAMENTO.png" },
+          { type: "frenzy", src: "Chinelos/Especiais/FRENESI.png" },
+          {
+            type: "double",
+            src: ["Chinelos/Especiais/PONTOSDUPLOS .png", "Chinelos/Especiais/PONTOSDUPLOS.png"]
+          }
+        ];
+
+        const normalResults = await Promise.allSettled(normalPaths.map(loadImage));
+        normalResults.forEach((result, index) => {
+          const src = normalPaths[index];
+          if (result.status === "fulfilled") {
+            const source = safeCreateSource(result.value, src);
+            if (source) assets.normal.push(source);
+          } else {
+            markAssetFailure(src, result.reason);
+          }
+        });
+
+        const bombResults = await Promise.allSettled(bombPaths.map(loadImage));
+        bombResults.forEach((result, index) => {
+          const src = bombPaths[index];
+          if (result.status === "fulfilled") {
+            const source = safeCreateSource(result.value, src);
+            if (source) assets.bomb.push(source);
+          } else {
+            markAssetFailure(src, result.reason);
+          }
+        });
+
+        for (const item of specialPaths) {
+          const candidatePaths = Array.isArray(item.src) ? item.src : [item.src];
+          const result = await loadImageWithFallback(candidatePaths);
+          if (!result) continue;
+          const source = safeCreateSource(result.img, result.src);
+          if (source) {
+            assets.special.push({ type: item.type, source });
+          }
+        }
+
+        const hasNormals = assets.normal.length > 0;
+        const hasBombs = assets.bomb.length > 0;
+        return {
+          ok: hasNormals,
+          hasBombs,
+          hadSecurityError,
+          failedAssets: [...failedAssets]
+        };
+      }
+
+      updateHud();
+      showMenu("Carregando...");
+      loadAssets()
+        .then((result) => {
+          if (!result.ok) {
+            if (result.hadSecurityError) {
+              menuMessage.textContent =
+                "Seu navegador bloqueou a leitura dos pixels. Abra via servidor (GitHub Pages ou Live Server).";
+            } else {
+              const missing = summarizeMissing(result.failedAssets);
+              menuMessage.textContent = missing
+                ? `Erro ao carregar imagens. Verifique nomes/pastas. Ex: ${missing}`
+                : "Erro ao carregar imagens. Verifique as pastas.";
+            }
+            startBtn.disabled = true;
+            return;
+          }
+          const missing = summarizeMissing(result.failedAssets);
+          if (result.hadSecurityError) {
+            menuMessage.textContent =
+              "Imagens carregadas, mas sem leitura de pixels. Para corte perfeito, use servidor.";
+          } else if (!result.hasBombs) {
+            menuMessage.textContent = "Bombas nao carregaram. O jogo roda sem elas.";
+          } else if (missing) {
+            menuMessage.textContent = `Algumas imagens falharam, mas o jogo roda. Ex: ${missing}`;
+          } else {
+            menuMessage.textContent = "Corte os chinelos e evite as bombas.";
+          }
+          startBtn.disabled = false;
+          startBtn.removeAttribute("disabled");
+        })
+        .catch(() => {
+          menuMessage.textContent = "Erro ao carregar imagens. Verifique as pastas.";
+          startBtn.disabled = true;
+        });
+
+      requestAnimationFrame(tick);
+    </script>
+  </body>
+</html>
